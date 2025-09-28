@@ -20,7 +20,7 @@ class NoteBase(BaseModel):
     body: str
 
 class NoteCreate(NoteBase):
-    tags: List[str] = []
+    pass
 
 class NoteUpdate(BaseModel):
     title: Optional[str] = None
