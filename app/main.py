@@ -1,6 +1,11 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from app.database.database import create_tables
+from app.routes import notes, tags
+
+create_tables()
+
 app = FastAPI(title="SecDev Course App", version="0.1.0")
 
 
@@ -21,7 +26,6 @@ async def api_error_handler(request: Request, exc: ApiError):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    # Normalize FastAPI HTTPException into our error envelope
     detail = exc.detail if isinstance(exc.detail, str) else "http_error"
     return JSONResponse(
         status_code=exc.status_code,
@@ -29,12 +33,15 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
+app.include_router(notes.router, prefix="/api/v1", tags=["study-notes"])
+app.include_router(tags.router, prefix="/api/v1", tags=["study-notes-tags"])
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
-# Example minimal entity (for tests/demo)
 _DB = {"items": []}
 
 
