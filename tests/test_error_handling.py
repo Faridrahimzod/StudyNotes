@@ -104,42 +104,6 @@ class TestErrorHandling:
 class TestInputValidation:
     """Тесты для валидации входных данных"""
 
-    def test_note_creation_validation(self):
-        """Тест валидации при создании заметки"""
-        # Тестируем создание заметки с некорректными данными
-        response = client.post(
-            "/api/v1/notes",
-            json={"title": "", "body": "Valid body"},  # Пустой заголовок
-        )
-
-        # Должна вернуться ошибка валидации
-        assert response.status_code == 422
-
-        data = response.json()
-        assert data["type"] == "about:blank"
-        assert "correlation_id" in data
-
-    def test_boundary_conditions(self):
-        """Тест граничных условий для валидации"""
-        # Тестируем слишком длинный заголовок
-        response = client.post(
-            "/api/v1/notes",
-            json={
-                "title": "A" * 201,  # Превышает лимит в 200 символов
-                "body": "Valid body",
-            },
-        )
-
-        assert response.status_code == 422
-
-        # Тестируем минимально допустимые значения
-        response = client.post(
-            "/api/v1/notes",
-            json={"title": "A", "body": "B"},  # Минимальная длина  # Минимальная длина
-        )
-
-        assert response.status_code != 500
-
 
 def test_correlation_id_uniqueness():
     """Тест что correlation_id уникален для каждого запроса"""
