@@ -1,7 +1,7 @@
 # ADR-001: Strict Input Validation for Study Notes API
 
 Дата: 2024-09-28
-Статус: Accepted
+Статус: Partially Implemented
 
 ## Context
 Study Notes API обрабатывает пользовательские данные, включая заметки, теги и метаданные. Без строгой валидации входных данных система уязвима для различных атак, включая:

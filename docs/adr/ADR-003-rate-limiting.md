@@ -1,7 +1,7 @@
 # ADR-003: Rate Limiting for Authentication Endpoints
 
 Дата: 2024-09-28
-Статус: Accepted
+Статус: Planned
 
 ## Context
 Study Notes API подвержен атакам brute-force на endpoints аутентификации. Без ограничения запросов злоумышленники могут:
