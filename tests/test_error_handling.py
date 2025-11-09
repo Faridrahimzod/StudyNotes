@@ -54,31 +54,32 @@ class TestErrorHandling:
         assert "item not found" in data["detail"]
         assert "correlation_id" in data
 
-    #    def test_generic_exception_handling(self):
-    #        """Тест обработки неожиданных исключений"""
-    #        # Создаем временный endpoint для тестирования
-    #        from fastapi import FastAPI
-    #        from app.errors import generic_exception_handler
-    #
-    #        test_app = FastAPI()
-    #
-    #        @test_app.get("/test-error")
-    #        def test_error():
-    #            raise ValueError("Test unexpected error")
-    #
-    #        test_app.add_exception_handler(Exception, generic_exception_handler)
-    #
-    #        test_client = TestClient(test_app)
-    #        response = test_client.get("/test-error")
-    #
-    #        assert response.status_code == 500
-    #        assert response.headers["content-type"] == "application/problem+json"
-    #
-    #        data = response.json()
-    #        assert data["type"] == "about:blank"
-    #        assert data["title"] == "Internal Server Error"
-    #        assert data["status"] == 500
-    #        assert "correlation_id" in data
+    def test_generic_exception_handling(self):
+        """Тест обработки неожиданных исключений"""
+        # Создаем временный endpoint для тестирования
+        from fastapi import FastAPI
+
+        from app.errors import generic_exception_handler
+
+        test_app = FastAPI()
+
+        @test_app.get("/test-error")
+        def test_error():
+            raise ValueError("Test unexpected error")
+
+        test_app.add_exception_handler(Exception, generic_exception_handler)
+
+        test_client = TestClient(test_app)
+        response = test_client.get("/test-error")
+
+        assert response.status_code == 500
+        assert response.headers["content-type"] == "application/problem+json"
+
+        data = response.json()
+        assert data["type"] == "about:blank"
+        assert data["title"] == "Internal Server Error"
+        assert data["status"] == 500
+        assert "correlation_id" in data
 
     def test_different_error_types_have_different_formats(self):
         """Тест что разные типы ошибок имеют разные форматы"""
@@ -101,10 +102,6 @@ class TestErrorHandling:
             assert response.headers["content-type"] == "application/problem+json"
 
 
-class TestInputValidation:
-    """Тесты для валидации входных данных"""
-
-
 def test_correlation_id_uniqueness():
     """Тест что correlation_id уникален для каждого запроса"""
     response1 = client.get("/items/9999")
@@ -118,3 +115,61 @@ def test_correlation_id_uniqueness():
     # И оба должны быть валидными UUID
     assert len(data1["correlation_id"]) == 36
     assert len(data2["correlation_id"]) == 36
+
+
+class TestInputValidation:
+    """Тесты для валидации входных данных"""
+
+    def test_xss_attempt_in_input(self):
+        """Тест на отражение XSS атаки"""
+        # Пытаемся передать XSS payload
+        xss_payload = "<script>alert('XSS')</script>"
+        response = client.post("/items", json={"name": xss_payload})
+
+        # Проверяем, что приложение не падает и обрабатывает input безопасно
+        assert response.status_code != 500
+
+        # Если успешный ответ, проверяем что данные были санитизированы
+        if response.status_code == 200:
+            response_data = response.json()
+            # Проверяем что скрипт не прошел как есть
+            assert "<script>" not in response_data.get("name", "")
+
+    def test_sql_injection_attempt_in_input(self):
+        """Тест на попытку SQL инъекции"""
+        sql_injection_payload = "1' OR '1'='1"
+        response = client.post("/items", json={"name": sql_injection_payload})
+
+        # Приложение не должно падать с 500 ошибкой
+        assert response.status_code != 500
+
+        # Должна быть либо успешная обработка, либо ошибка валидации
+        assert response.status_code in [200, 400, 422]
+
+    def test_input_length_validation(self):
+        """Тест на валидацию длины входных данных"""
+        # Слишком короткая строка
+        response_short = client.post("/items", json={"name": ""})
+        # Слишком длинная строка (предположим максимум 100 символов)
+        long_string = "a" * 101
+        response_long = client.post("/items", json={"name": long_string})
+
+        # Ожидаем ошибки валидации
+        assert response_short.status_code == 422
+        assert response_long.status_code == 422
+
+    def test_input_type_validation(self):
+        """Тест на валидацию типа входных данных"""
+        # Передаем неверный тип данных
+        response = client.post("/items", json={"name": 123})  # число вместо строки
+
+        # Ожидаем ошибку валидации
+        assert response.status_code == 422
+        assert response.headers["content-type"] == "application/problem+json"
+
+        # Проверяем формат ошибки
+        error_data = response.json()
+        assert error_data["type"] == "/errors/validation"
+        assert error_data["title"] == "Validation Error"
+        assert error_data["status"] == 422
+        assert "correlation_id" in error_data

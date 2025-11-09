@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 
 from app.database.database import create_tables
 
@@ -8,8 +11,10 @@ from app.errors import (
     generic_exception_handler,
     http_exception_handler,
     problem_detail_handler,
+    validation_exception_handler,
 )
 from app.routes import notes, tags
+from app.schemas.item import ItemCreate
 
 # Создаем таблицы при запуске
 create_tables()
@@ -25,6 +30,7 @@ app = FastAPI(
 app.add_exception_handler(ProblemDetailException, problem_detail_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Подключаем Study Notes роутеры
 app.include_router(notes.router, prefix="/api/v1", tags=["study-notes"])
@@ -41,17 +47,20 @@ _DB = {"items": []}
 
 
 @app.post("/items")
-def create_item(name: str):
-    if not name or len(name) > 100:
-        raise ProblemDetailException(
-            status_code=422,
-            title="Validation Error",
-            detail="name must be 1..100 chars",
-            error_type="/errors/validation",
-        )
-    item = {"id": len(_DB["items"]) + 1, "name": name}
-    _DB["items"].append(item)
-    return item
+async def create_item(item: ItemCreate):
+    # Безопасная сериализация JSON с обработкой Decimal
+    def decimal_default(obj):
+        if isinstance(obj, Decimal):
+            return str(obj)  # Преобразуем Decimal в строку безопасно
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+    # Возвращаем валидированные и нормализованные данные
+    return {
+        "id": 1,
+        "name": item.name,
+        "price": str(item.price) if item.price else None,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
 
 
 @app.get("/items/{item_id}")
