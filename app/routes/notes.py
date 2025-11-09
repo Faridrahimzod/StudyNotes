@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.note import Note
 from app.schemas.note import NoteCreate, NoteResponse
+from app.utils.json_security import safe_json_response
 
 router = APIRouter()
 
@@ -19,6 +20,42 @@ def get_notes(db: Session = Depends(get_db)):
     return notes
 
 
+@router.get("/")
+async def search_notes(
+    search: str = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+):
+    """Поиск заметок с безопасной параметризацией"""
+    try:
+        query = db.query(Note)
+
+        if search:
+            # Безопасный поиск через параметризацию
+            query = query.filter(
+                Note.title.contains(search) | Note.content.contains(search)
+            )
+
+        notes = query.offset(skip).limit(limit).all()
+
+        # Возвращаем безопасно сериализованные данные
+        notes_data = []
+        for note in notes:
+            notes_data.append(
+                {
+                    "id": note.id,
+                    "title": note.title,
+                    "content": note.content,
+                    "created_at": (
+                        note.created_at.isoformat() if note.created_at else None
+                    ),
+                }
+            )
+
+        return safe_json_response(notes_data)
+
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 @router.get("/notes/{note_id}", response_model=NoteResponse)
 def get_note(note_id: int, db: Session = Depends(get_db)):
     """
@@ -27,7 +64,14 @@ def get_note(note_id: int, db: Session = Depends(get_db)):
     note = db.query(Note).filter(Note.id == note_id).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
-    return note
+    return safe_json_response(
+        {
+            "id": note.id,
+            "title": note.title,
+            "content": note.content,
+            "created_at": note.created_at.isoformat() if note.created_at else None,
+        }
+    )
 
 
 @router.post("/notes", response_model=NoteResponse)
