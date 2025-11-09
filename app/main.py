@@ -13,7 +13,7 @@ from app.errors import (
     problem_detail_handler,
     validation_exception_handler,
 )
-from app.routes import notes, tags
+from app.routes import demo, files, notes, tags
 from app.schemas.item import ItemCreate
 
 # Создаем таблицы при запуске
@@ -35,6 +35,8 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 # Подключаем Study Notes роутеры
 app.include_router(notes.router, prefix="/api/v1", tags=["study-notes"])
 app.include_router(tags.router, prefix="/api/v1", tags=["study-notes-tags"])
+app.include_router(files.router, prefix="/api/v1", tags=["files"])
+app.include_router(demo.router, prefix="/api/v1", tags=["demo"])
 
 
 @app.get("/health")
