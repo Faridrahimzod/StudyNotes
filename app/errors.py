@@ -3,12 +3,13 @@ import re
 from typing import Any, Dict, Optional, Union
 from uuid import uuid4
 
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 # Настраиваем безопасный логгер
 security_logger = logging.getLogger("security")
+logger = logging.getLogger(__name__)
 
 
 class ProblemDetailException(HTTPException):
@@ -131,34 +132,26 @@ def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
-def generic_exception_handler(request: Request, exc: Exception):
-    """Обработчик для неожиданных исключений"""
+async def generic_exception_handler(request: Request, exc: Exception):
+    """Обработчик неожиданных исключений"""
+    from uuid import uuid4
+
     correlation_id = str(uuid4())
-
-    problem_data = {
-        "type": "about:blank",
-        "title": "Internal Server Error",
-        "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
-        "detail": "An unexpected error occurred",
-        "correlation_id": correlation_id,
-    }
-
-    # Безопасное логирование - не логируем полный traceback в продакшене
-    security_logger.error(
-        "Unhandled exception: %s - %s - %s",
-        type(exc).__name__,
-        correlation_id,
-        mask_sensitive_data(str(request.url)),
+    # Временная замена logger на print для отладки
+    print(
+        f"Unhandled exception: {type(exc).__name__} - {correlation_id} - {request.url}"
     )
 
-    headers = {
-        "Content-Type": "application/problem+json",
-    }
-
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=problem_data,
-        headers=headers,
+        status_code=500,
+        content={
+            "type": "about:blank",
+            "title": "Internal Server Error",
+            "status": 500,
+            "detail": "An internal server error occurred.",
+            "correlation_id": correlation_id,
+        },
+        media_type="application/problem+json",
     )
 
 
