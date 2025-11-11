@@ -1,7 +1,10 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .validation import StrictBaseModel
 
 
 class TagBase(BaseModel):
@@ -20,19 +23,32 @@ class TagResponse(TagBase):
         from_attributes = True
 
 
-class NoteBase(BaseModel):
-    title: str
-    body: str
+class NoteBase(StrictBaseModel):
+    title: str = Field(
+        ..., min_length=1, max_length=200, pattern="^[a-zA-Z0-9\\s\\-\\.\\,]+$"
+    )
+    body: str = Field(..., min_length=1, max_length=10000)
+    priority: Decimal = Field(
+        default=Decimal("1.0"), ge=Decimal("0.1"), le=Decimal("10.0")
+    )
 
 
 class NoteCreate(NoteBase):
-    pass
+    @field_validator("title")
+    @classmethod
+    def validate_title_content(cls, v):
+        """Защита от потенциально опасного контента в заголовке"""
+        forbidden_patterns = ["<script>", "javascript:", "onload="]
+        for pattern in forbidden_patterns:
+            if pattern in v.lower():
+                raise ValueError(f"Title contains forbidden pattern: {pattern}")
+        return v
 
 
-class NoteUpdate(BaseModel):
-    title: Optional[str] = None
-    body: Optional[str] = None
-    tags: Optional[List[str]] = None
+class NoteUpdate(StrictBaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    body: Optional[str] = Field(None, min_length=1, max_length=10000)
+    priority: Optional[Decimal] = Field(None, ge=Decimal("0.1"), le=Decimal("10.0"))
 
 
 class NoteResponse(NoteBase):
@@ -40,7 +56,6 @@ class NoteResponse(NoteBase):
     user_id: int
     created_at: datetime
     updated_at: datetime
-    tags: List[TagResponse] = []
+    tags: List[str] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
