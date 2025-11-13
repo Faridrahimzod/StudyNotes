@@ -1,4 +1,4 @@
-.PHONY: build up down test clean scan
+.PHONY: build up down test clean security-check security-scan
 
 # Build the container
 build:
@@ -14,25 +14,39 @@ down:
 
 # Run tests
 test:
-	docker-compose exec app python -m pytest tests/ -v
+	python -m pytest tests/ -v
 
 # Clean up
 clean:
 	docker-compose down -v
 	docker system prune -f
 
-# Security scan (if hadolint is available)
-scan:
-	docker run --rm -i hadolint/hadolint < Dockerfile
+# Security scan
+security-scan:
+	@echo "Running security scans..."
+	@if command -v hadolint >/dev/null 2>&1; then \
+		hadolint Dockerfile; \
+	else \
+		echo "Hadolint not installed, skipping..."; \
+	fi
+	@echo "Container security checks:"
+	@if docker ps | grep -q secure-app; then \
+		echo "  - Non-root user: $$(docker exec secure-app whoami 2>/dev/null)"; \
+		echo "  - User ID: $$(docker exec secure-app id -u 2>/dev/null)"; \
+		echo "  - Health status: $$(docker inspect secure-app --format '{{.State.Health.Status}}' 2>/dev/null)"; \
+	else \
+		echo "  Container 'secure-app' is not running"; \
+	fi
 
-# Check container health
-health:
-	docker inspect secure-app --format "{{.State.Health.Status}}"
+# Check container security
+security-check:
+	@chmod +x scripts/security-scan.sh
+	@./scripts/security-scan.sh
 
 # View logs
 logs:
 	docker-compose logs -f
 
-# Run specific script for Windows
+# Windows run script
 win-run:
 	powershell -File scripts/run-container.ps1
