@@ -1,16 +1,28 @@
+import os
 import subprocess
-import time
 
 import pytest
 
 
+def is_ci_environment():
+    """Проверяет запущены ли мы в CI среде"""
+    return os.getenv("CI") == "true"
+
+
 def is_docker_available():
-    """Проверяет доступен ли Docker"""
+    """Проверяет доступен ли Docker и docker-compose"""
     try:
-        result = subprocess.run(
+        # Проверяем docker
+        docker_result = subprocess.run(
             ["docker", "--version"], capture_output=True, text=True, timeout=5
         )
-        return result.returncode == 0
+
+        # Проверяем docker-compose
+        compose_result = subprocess.run(
+            ["docker-compose", "--version"], capture_output=True, text=True, timeout=5
+        )
+
+        return docker_result.returncode == 0 and compose_result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return False
 
@@ -36,14 +48,16 @@ def is_container_running(container_name):
 class TestContainerSecurity:
     """Тесты безопасности контейнера"""
 
-    @pytest.fixture(autouse=True)
-    def skip_if_no_docker(self):
-        """Пропускает тесты если Docker не доступен"""
-        if not is_docker_available():
-            pytest.skip("Docker is not available")
-        if not is_container_running("secure-app"):
-            pytest.skip("Container 'secure-app' is not running")
-
+    @pytest.mark.skipif(
+        is_ci_environment(), reason="Container tests require local Docker environment"
+    )
+    @pytest.mark.skipif(
+        not is_docker_available(), reason="Docker and docker-compose are not available"
+    )
+    @pytest.mark.skipif(
+        not is_container_running("secure-app"),
+        reason="Container 'secure-app' is not running",
+    )
     def test_container_running_as_non_root(self):
         """Тест что контейнер запущен под non-root пользователем"""
         result = subprocess.run(
@@ -55,9 +69,20 @@ class TestContainerSecurity:
         user_id = result.stdout.strip()
         assert user_id != "0", "Container should not run as root"
 
+    @pytest.mark.skipif(
+        is_ci_environment(), reason="Container tests require local Docker environment"
+    )
+    @pytest.mark.skipif(
+        not is_docker_available(), reason="Docker and docker-compose are not available"
+    )
+    @pytest.mark.skipif(
+        not is_container_running("secure-app"),
+        reason="Container 'secure-app' is not running",
+    )
     def test_container_healthcheck(self):
         """Тест что healthcheck проходит успешно"""
-        # Даем контейнеру больше времени для запуска
+        import time
+
         time.sleep(10)
 
         result = subprocess.run(
@@ -67,16 +92,23 @@ class TestContainerSecurity:
             timeout=10,
         )
         health_status = result.stdout.strip()
-
-        # В CI healthcheck может быть starting или healthy
         assert health_status in [
             "healthy",
             "starting",
         ], f"Container health status should be healthy or starting, got: {health_status}"
 
+    @pytest.mark.skipif(
+        is_ci_environment(), reason="Container tests require local Docker environment"
+    )
+    @pytest.mark.skipif(
+        not is_docker_available(), reason="Docker and docker-compose are not available"
+    )
+    @pytest.mark.skipif(
+        not is_container_running("secure-app"),
+        reason="Container 'secure-app' is not running",
+    )
     def test_app_health_endpoint(self):
         """Тест что health endpoint приложения работает"""
-        # Используем curl вместо requests чтобы избежать зависимостей
         result = subprocess.run(
             [
                 "docker",
@@ -90,13 +122,21 @@ class TestContainerSecurity:
             text=True,
             timeout=15,
         )
-        # Разрешаем как успех (0), так и временную недоступность (7 - couldn't connect)
-        # Главное что не должно быть ошибок выполнения команды
         assert result.returncode in [
             0,
             7,
         ], f"Health endpoint check failed with code: {result.returncode}"
 
+    @pytest.mark.skipif(
+        is_ci_environment(), reason="Container tests require local Docker environment"
+    )
+    @pytest.mark.skipif(
+        not is_docker_available(), reason="Docker and docker-compose are not available"
+    )
+    @pytest.mark.skipif(
+        not is_container_running("secure-app"),
+        reason="Container 'secure-app' is not running",
+    )
     def test_container_has_no_sensitive_mounts(self):
         """Тест что контейнер не имеет чувствительных монтирований"""
         result = subprocess.run(
@@ -106,6 +146,5 @@ class TestContainerSecurity:
             timeout=10,
         )
         mounts = result.stdout.strip()
-        # Проверяем что нет монтирования чувствительных директорий
         assert "/etc/passwd" not in mounts
         assert "/etc/shadow" not in mounts
