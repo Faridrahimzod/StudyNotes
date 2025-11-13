@@ -1,4 +1,4 @@
-.PHONY: build up down test clean security-check security-scan
+.PHONY: build up down test clean security-check container-test
 
 # Build the container
 build:
@@ -12,7 +12,7 @@ up:
 down:
 	docker-compose down
 
-# Run tests
+# Run application tests
 test:
 	python -m pytest tests/ -v
 
@@ -25,6 +25,7 @@ clean:
 security-scan:
 	@echo "Running security scans..."
 	@if command -v hadolint >/dev/null 2>&1; then \
+		echo "Hadolint:"; \
 		hadolint Dockerfile; \
 	else \
 		echo "Hadolint not installed, skipping..."; \
@@ -38,15 +39,15 @@ security-scan:
 		echo "  Container 'secure-app' is not running"; \
 	fi
 
-# Check container security
-security-check:
-	@chmod +x scripts/security-scan.sh
-	@./scripts/security-scan.sh
+# Container test
+container-test:
+	@chmod +x scripts/test-container.sh
+	@./scripts/test-container.sh
+
+# Windows container test
+container-test-win:
+	powershell -File scripts/test-container.ps1
 
 # View logs
 logs:
 	docker-compose logs -f
-
-# Windows run script
-win-run:
-	powershell -File scripts/run-container.ps1
