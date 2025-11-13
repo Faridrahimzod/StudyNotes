@@ -1,17 +1,40 @@
+# Git
 .git
 .gitignore
-.gitattributes
-__pycache__/
+
+# Python
+__pycache__
 *.pyc
 *.pyo
 *.pyd
-*.sqlite
-*.db
+.Python
+env
+venv
+.venv
+env/
+venv/
 .venv/
-dist/
-build/
-.pytest_cache/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Testing
+.pytest_cache
 .coverage
 htmlcov/
-node_modules/
-.env
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+uploads/
+test_uploads/
+*.db
