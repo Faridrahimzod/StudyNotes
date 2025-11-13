@@ -1,0 +1,45 @@
+name: Container Tests
+
+on:
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'tests/test_container.py'
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'tests/test_container.py'
+
+jobs:
+  container-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        docker-compose build
+
+    - name: Start container
+      run: |
+        docker-compose up -d
+        sleep 30  # Даем время на запуск
+
+    - name: Check container status
+      run: |
+        docker-compose ps
+        docker inspect secure-app --format '{{.State.Health.Status}}'
+
+    - name: Run container tests
+      run: |
+        python -m pytest tests/test_container.py -v
+
+    - name: Stop container
+      run: |
+        docker-compose down
