@@ -1,23 +1,28 @@
-name: CI
+name: CI (minimal)
+
 on:
-  pull_request:
   push:
-    branches: [main]
+  pull_request:
+
 permissions:
   contents: read
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: "pip"
 
       - name: Install dependencies
@@ -31,8 +36,5 @@ jobs:
           black --check .
           isort --check-only .
 
-      - name: Tests
+      - name: Run tests
         run: pytest -q
-
-      - name: Pre-commit (all files)
-        run: pre-commit run --all-files
