@@ -15,6 +15,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,6 +38,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
+      - name: Security scan dependencies
+        run: |
+          pip install safety
+          safety check --json --output reports/safety-report.json || true
+
+      - name: Security scan code
+        run: |
+          pip install bandit
+          bandit -r app/ -f json -o reports/bandit-report.json || true
+
       - name: Lint & Format
         run: |
           ruff check --output-format=github .
@@ -46,12 +57,12 @@ jobs:
       - name: Run tests with reports
         run: |
           mkdir -p reports
-          pytest -q --junitxml=reports/junit.xml
+          pytest -q --junitxml=reports/junit.xml --cov=app --cov-report=xml:reports/coverage.xml
 
-      - name: Upload test reports
+      - name: Upload all reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: ci-reports
           path: reports/
           retention-days: 7
