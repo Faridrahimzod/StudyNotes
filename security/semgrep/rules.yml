@@ -1,0 +1,19 @@
+rules:
+  - id: python-subprocess-shell-true
+    languages: [python]
+    message: "Avoid using shell=True in subprocess calls; this can lead to command injection."
+    severity: ERROR
+    patterns:
+      - pattern: subprocess.$FUNC(..., shell=True, ...)
+    metadata:
+      category: security
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+
+  - id: python-debug-true
+    languages: [python]
+    message: "Debug mode is enabled; this should be disabled in production deployments."
+    severity: WARNING
+    pattern: "debug=True"
+    metadata:
+      category: security
+      cwe: "CWE-489: Active Debug Code"
