@@ -1,0 +1,22 @@
+title = "Study Notes Gitleaks config"
+
+[extend]
+# Используем встроенные правила Gitleaks по умолчанию
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for non-sensitive patterns"
+
+# Пути, которые можно игнорировать (артефакты, отчёты и т.п.)
+paths = [
+  "EVIDENCE/",          # отчёты и артефакты анализа
+]
+
+# Если появятся ложные срабатывания по содержимому,
+# добавляем сюда безопасные регулярки.
+regexes = [
+  '''TEST_SECRET_DO_NOT_USE''',
+]
+
+# Список коммитов, которые можно целиком игнорировать
+commits = []
