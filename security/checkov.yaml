@@ -1,0 +1,13 @@
+# Базовая конфигурация Checkov для StudyNotes
+
+quiet: false
+compact: true
+
+framework:
+  - kubernetes
+  - dockerfile
+
+skip-check: []
+# Примеры:
+# skip-check:
+#   - CKV_K8S_999  # пример: осознанно игнорируем конкретный check

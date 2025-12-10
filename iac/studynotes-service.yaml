@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: studynotes
+  labels:
+    app: studynotes
+spec:
+  type: ClusterIP
+  selector:
+    app: studynotes
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000

@@ -1,0 +1,14 @@
+# Минимальная конфигурация Trivy для StudyNotes
+
+scan:
+  scanners:
+    - vuln
+    - config
+
+  severity:
+    - CRITICAL
+    - HIGH
+
+format: "json"
+
+ignore-unfixed: false
