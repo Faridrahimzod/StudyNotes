@@ -1,0 +1,9 @@
+# Базовая конфигурация Hadolint для StudyNotes
+
+failure-threshold: warning
+
+ignored: []
+# Примеры правил, которые можно игнорировать при необходимости:
+# ignored:
+#   - DL3008  # apt-get install без указания версий
+#   - DL3018  # apk add без фиксированных версий
